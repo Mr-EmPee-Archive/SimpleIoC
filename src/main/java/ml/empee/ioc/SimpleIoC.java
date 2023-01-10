@@ -16,6 +16,7 @@ import ml.empee.ioc.utility.ReflectionUtils;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 public final class SimpleIoC {
 
@@ -91,9 +92,9 @@ public final class SimpleIoC {
     Parameter[] parameters = constructor.getParameters();
     Object[] args = new Object[parameters.length];
     for(int i=0; i<parameters.length; i++) {
-      Optional<?> bean = container.getBean(parameters[i].getType());
-      if(bean.isPresent()) {
-        args[i] = bean.get();
+      Object bean = container.getBean(parameters[i].getType());
+      if(bean != null) {
+        args[i] = bean;
       } else {
         return Optional.empty();
       }
@@ -113,10 +114,10 @@ public final class SimpleIoC {
         .collect(Collectors.toList());
   }
 
-  public <T> Optional<T> getBean(Class<T> clazz) {
-    return (Optional<T>) beans.stream()
+  public <T> T getBean(Class<T> clazz) {
+    return (T) beans.stream()
         .filter(b -> b.getClass().equals(clazz))
-        .findFirst();
+        .findFirst().orElse(null);
   }
 
   public void addBean(Object bean) {

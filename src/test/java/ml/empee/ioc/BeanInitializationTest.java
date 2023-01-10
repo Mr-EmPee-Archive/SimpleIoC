@@ -1,5 +1,6 @@
 package ml.empee.ioc;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
@@ -20,17 +21,17 @@ class BeanInitializationTest {
   void shouldInitializeBeans() {
     SimpleIoC container = SimpleIoC.initialize(plugin, "ml.empee.ioc", Collections.emptyList());
 
-    assertTrue(container.getBean(FirstBean.class).isPresent());
-    assertTrue(container.getBean(SecondBean.class).isPresent());
-    assertTrue(container.getBean(ThirdBean.class).isPresent());
+    assertNotNull(container.getBean(FirstBean.class));
+    assertNotNull(container.getBean(SecondBean.class));
+    assertNotNull(container.getBean(ThirdBean.class));
   }
 
   @Test
   void shouldStopBeans() {
     SimpleIoC container = SimpleIoC.initialize(plugin, "ml.empee.ioc", Collections.emptyList());
-    Optional<FirstBean> firstBean = container.getBean(FirstBean.class);
+    FirstBean firstBean = container.getBean(FirstBean.class);
     container.removeAllBeans();
-    assertTrue(firstBean.get().isStopped());
+    assertTrue(firstBean.isStopped());
   }
 
   @Bean
