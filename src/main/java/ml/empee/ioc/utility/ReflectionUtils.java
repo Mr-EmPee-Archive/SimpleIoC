@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 import ml.empee.ioc.IocException;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -18,10 +19,13 @@ public class ReflectionUtils {
     }
   }
 
+  @SneakyThrows
   public static Object newInstance(Constructor<?> constructor, Object... args) {
     try {
       return constructor.newInstance(args);
-    } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+    } catch (InvocationTargetException e) {
+      throw e.getCause();
+    } catch (InstantiationException | IllegalAccessException e) {
       throw new IocException("Unable to create bean" + constructor.getDeclaringClass().getName(), e);
     }
   }
