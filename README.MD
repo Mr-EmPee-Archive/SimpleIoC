@@ -1,5 +1,5 @@
 # SimpleIoC [![](https://jitpack.io/v/Mr-EmPee/SimpleIoC.svg)](https://jitpack.io/#Mr-EmPee/SimpleIoC)
-A lightweigth InvesrionOfControl container for minecraft,
+A lightweight InvesrionOfControl container for minecraft,
 share and create instances of your classes with ease!
 
 # Installation
