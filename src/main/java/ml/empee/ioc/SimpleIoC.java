@@ -16,8 +16,11 @@ import ml.empee.ioc.utility.ReflectionUtils;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.Nullable;
 
+/**
+ * Simple IoC container for Bukkit plugins. <br>
+ * Use {@link #initialize(JavaPlugin, String...)} to initialize the container. <br>
+ */
 public final class SimpleIoC {
 
   private final JavaPlugin plugin;
@@ -29,7 +32,8 @@ public final class SimpleIoC {
   }
 
   /**
-   * Deep scan all the classes from the provided package
+   * Deep scan all the classes from the provided package. <br>
+   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
    * @param exclusions Packages to exclude from the scan
    */
   public static SimpleIoC initialize(JavaPlugin plugin, String packageToScan, List<String> exclusions) {
@@ -45,7 +49,8 @@ public final class SimpleIoC {
   }
 
   /**
-   * Deep scan all the classes from the where the plugin main class is located
+   * Deep scan all the classes from the where the plugin main class is located. <br>
+   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
    * @param exclusions Packages to exclude from the scan
    */
   public static SimpleIoC initialize(JavaPlugin plugin, String... exclusions) {
@@ -69,7 +74,6 @@ public final class SimpleIoC {
 
     return container;
   }
-
   private static Constructor<?> findBeanConstructor(Class<?> bean) {
     Constructor<?>[] constrcutors = bean.getConstructors();
     if(constrcutors.length == 1) {
@@ -104,7 +108,6 @@ public final class SimpleIoC {
         ReflectionUtils.newInstance(constructor, args)
     );
   }
-
   private static List<Class<?>> findAllBeans(ClassPath classPath, String packageToScan,  List<String> exclusions) {
     return classPath.getAllClasses().stream()
         .filter(c -> c.getPackageName().startsWith(packageToScan))
@@ -128,6 +131,26 @@ public final class SimpleIoC {
     beans.add(bean);
   }
 
+  /**
+   * Unregister and stop the bean if it implements {@link Listener} or {@link Stoppable}. <br>
+   * Remove the bean from the container.
+   */
+  public void removeBean(Object bean) {
+   if(bean instanceof Stoppable) {
+     ((Stoppable) bean).stop();
+   }
+
+   if(bean instanceof Listener) {
+     HandlerList.unregisterAll((Listener) bean);
+   }
+
+    beans.remove(bean);
+  }
+
+  /**
+   * Unregister and stop all the beans that implement {@link Listener} or {@link Stoppable}. <br>
+   * Clears the container.
+   */
   public void removeAllBeans() {
     for(Object bean : beans) {
       if(bean instanceof Stoppable) {
