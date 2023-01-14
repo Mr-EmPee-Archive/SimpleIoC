@@ -19,8 +19,10 @@ If you are using maven you can add this to your `pom.xml`
 </dependency>
 ```
 # Usage
-Mark the classes that you want accessibile with `@Bean` these classes
-must have at least 1 accessibile public constructor.
+Mark the classes that you want accessible with `@Bean` these classes
+must have at least 1 accessible public constructor.
+- Use #SimpleIoC.initialize inside your onEnable
+- Use #SimpleIoC.removeAllBeans inside your onDisable
 ## Tips
 > Every bean constructor can depends on one or more beans 
 
