@@ -74,5 +74,5 @@ must have at least 1 accessibile public constructor.
   }
 ```
 # Features
-- Beans that are instance of `Listener` will be autmatically registered
-- Beans that are instance of `Stoppable` will invoke the `stop()` method when being removed
+- Beans that are an instance of `Listener` will be automatically registered
+- Beans that are an instance of `Stoppable` will invoke the `stop()` method when being removed
