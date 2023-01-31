@@ -19,61 +19,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * Simple IoC container for Bukkit plugins. <br>
- * Use {@link #initialize(JavaPlugin, String...)} to initialize the container. <br>
+ * Use {@link #initialize(String...)} to initialize the container. <br>
  */
 public final class SimpleIoC {
 
   private final JavaPlugin plugin;
   private final List<Object> beans = new ArrayList<>();
 
-  private SimpleIoC(JavaPlugin plugin) {
-    this.plugin = plugin;
-    beans.add(plugin);
-  }
-
-  /**
-   * Deep scan all the classes from the provided package. <br>
-   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
-   * @param exclusions Packages to exclude from the scan
-   */
-  public static SimpleIoC initialize(JavaPlugin plugin, String packageToScan, List<String> exclusions) {
-    ClassPath classPath;
-    try {
-      classPath = ClassPath.from(plugin.getClass().getClassLoader());
-    } catch (IOException e) {
-      throw new IocException("Unable to scan all the packages", e);
-    }
-
-    List<Class<?>> beans = findAllBeans(classPath, packageToScan, exclusions);
-    return loadBeans(plugin, beans);
-  }
-
-  /**
-   * Deep scan all the classes from the where the plugin main class is located. <br>
-   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
-   * @param exclusions Packages to exclude from the scan
-   */
-  public static SimpleIoC initialize(JavaPlugin plugin, String... exclusions) {
-    return initialize(plugin, plugin.getClass().getPackage().getName(), Arrays.asList(exclusions));
-  }
-
-  private static SimpleIoC loadBeans(JavaPlugin plugin, List<Class<?>> beans) {
-    SimpleIoC container = new SimpleIoC(plugin);
-    while (beans.size() != 0) {
-      Iterator<Class<?>> beanIterator = beans.iterator();
-      while (beanIterator.hasNext()) {
-        Class<?> beanClazz = beanIterator.next();
-        Constructor<?> beanConstructor = findBeanConstructor(beanClazz);
-        Optional<Object> bean = createBean(container, beanConstructor);
-        if(bean.isPresent()) {
-          container.addBean((bean.get()));
-          beanIterator.remove();
-        }
-      }
-    }
-
-    return container;
-  }
   private static Constructor<?> findBeanConstructor(Class<?> bean) {
     Constructor<?>[] constrcutors = bean.getConstructors();
     if(constrcutors.length == 1) {
@@ -88,6 +40,7 @@ public final class SimpleIoC {
 
     throw new IocException("Unable to find a constructor for the bean " + bean.getName());
   }
+
   private static Optional<Object> createBean(SimpleIoC container, Constructor<?> constructor) {
     if(constructor.getParameterCount() == 0) {
       return Optional.of(ReflectionUtils.newInstance(constructor));
@@ -108,6 +61,7 @@ public final class SimpleIoC {
         ReflectionUtils.newInstance(constructor, args)
     );
   }
+
   private static List<Class<?>> findAllBeans(ClassPath classPath, String packageToScan,  List<String> exclusions) {
     return classPath.getAllClasses().stream()
         .filter(c -> c.getPackageName().startsWith(packageToScan))
@@ -115,6 +69,53 @@ public final class SimpleIoC {
         .map(c -> c.load())
         .filter(c -> c.isAnnotationPresent(Bean.class))
         .collect(Collectors.toList());
+  }
+
+
+  public SimpleIoC(JavaPlugin plugin) {
+    this.plugin = plugin;
+    beans.add(plugin);
+  }
+
+  /**
+   * Deep scan all the classes from the provided package. <br>
+   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
+   * @param exclusions Packages to exclude from the scan
+   */
+  public void initialize(String packageToScan, List<String> exclusions) {
+    ClassPath classPath;
+    try {
+      classPath = ClassPath.from(plugin.getClass().getClassLoader());
+    } catch (IOException e) {
+      throw new IocException("Unable to scan all the packages", e);
+    }
+
+    List<Class<?>> beans = findAllBeans(classPath, packageToScan, exclusions);
+    loadBeans(beans);
+  }
+
+  /**
+   * Deep scan all the classes from the where the plugin main class is located. <br>
+   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
+   * @param exclusions Packages to exclude from the scan
+   */
+  public void initialize(String... exclusions) {
+    initialize(plugin.getClass().getPackage().getName(), Arrays.asList(exclusions));
+  }
+
+  private void loadBeans(List<Class<?>> beans) {
+    while (beans.size() != 0) {
+      Iterator<Class<?>> beanIterator = beans.iterator();
+      while (beanIterator.hasNext()) {
+        Class<?> beanClazz = beanIterator.next();
+        Constructor<?> beanConstructor = findBeanConstructor(beanClazz);
+        Optional<Object> bean = createBean(this, beanConstructor);
+        if(bean.isPresent()) {
+          addBean((bean.get()));
+          beanIterator.remove();
+        }
+      }
+    }
   }
 
   public <T> T getBean(Class<T> clazz) {

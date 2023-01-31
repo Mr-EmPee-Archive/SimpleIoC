@@ -15,11 +15,12 @@ import org.mockito.Mockito;
 
 class BeanInitializationTest {
 
-  private JavaPlugin plugin = Mockito.mock(JavaPlugin.class);
+  private final JavaPlugin plugin = Mockito.mock(JavaPlugin.class);
 
   @Test
   void shouldInitializeBeans() {
-    SimpleIoC container = SimpleIoC.initialize(plugin, "ml.empee.ioc", Collections.emptyList());
+    SimpleIoC container = new SimpleIoC(plugin);
+    container.initialize("ml.empee.ioc", Collections.emptyList());
 
     assertNotNull(container.getBean(FirstBean.class));
     assertNotNull(container.getBean(SecondBean.class));
@@ -28,7 +29,9 @@ class BeanInitializationTest {
 
   @Test
   void shouldStopBeans() {
-    SimpleIoC container = SimpleIoC.initialize(plugin, "ml.empee.ioc", Collections.emptyList());
+    SimpleIoC container = new SimpleIoC(plugin);
+    container.initialize("ml.empee.ioc", Collections.emptyList());
+
     FirstBean firstBean = container.getBean(FirstBean.class);
     container.removeAllBeans();
     assertTrue(firstBean.isStopped());
