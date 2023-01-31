@@ -6,9 +6,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import ml.empee.ioc.annotations.Bean;
 import ml.empee.ioc.annotations.InversionOfControl;
@@ -26,7 +28,11 @@ public final class SimpleIoC {
   private final JavaPlugin plugin;
   private final List<Object> beans = new ArrayList<>();
 
-  private static Constructor<?> findBeanConstructor(Class<?> bean) {
+  private static Constructor<?> findBeanConstructor(Class<?> bean) throws IocException {
+    if(!bean.isAnnotationPresent(Bean.class)) {
+      throw new IocException("The class " + bean.getName() + " isn't a bean");
+    }
+
     Constructor<?>[] constrcutors = bean.getConstructors();
     if(constrcutors.length == 1) {
       return constrcutors[0];
@@ -41,27 +47,6 @@ public final class SimpleIoC {
     throw new IocException("Unable to find a constructor for the bean " + bean.getName());
   }
 
-  private static Optional<Object> createBean(SimpleIoC container, Constructor<?> constructor) {
-    if(constructor.getParameterCount() == 0) {
-      return Optional.of(ReflectionUtils.newInstance(constructor));
-    }
-
-    Parameter[] parameters = constructor.getParameters();
-    Object[] args = new Object[parameters.length];
-    for(int i=0; i<parameters.length; i++) {
-      Object bean = container.getBean(parameters[i].getType());
-      if(bean != null) {
-        args[i] = bean;
-      } else {
-        return Optional.empty();
-      }
-    }
-
-    return Optional.of(
-        ReflectionUtils.newInstance(constructor, args)
-    );
-  }
-
   private static List<Class<?>> findAllBeans(ClassPath classPath, String packageToScan,  List<String> exclusions) {
     return classPath.getAllClasses().stream()
         .filter(c -> c.getPackageName().startsWith(packageToScan))
@@ -74,7 +59,8 @@ public final class SimpleIoC {
 
   public SimpleIoC(JavaPlugin plugin) {
     this.plugin = plugin;
-    beans.add(plugin);
+
+    addBean(plugin);
   }
 
   /**
@@ -104,18 +90,40 @@ public final class SimpleIoC {
   }
 
   private void loadBeans(List<Class<?>> beans) {
-    while (beans.size() != 0) {
-      Iterator<Class<?>> beanIterator = beans.iterator();
-      while (beanIterator.hasNext()) {
-        Class<?> beanClazz = beanIterator.next();
-        Constructor<?> beanConstructor = findBeanConstructor(beanClazz);
-        Optional<Object> bean = createBean(this, beanConstructor);
-        if(bean.isPresent()) {
-          addBean((bean.get()));
-          beanIterator.remove();
-        }
-      }
+    if(beans.isEmpty()) {
+      return;
     }
+
+    for(Class<?> bean : beans) {
+      if(getBean(bean) != null) {
+        continue;
+      }
+
+      addBean(
+          loadBean(bean, new HashSet<>())
+      );
+    }
+  }
+
+  private Object loadBean(Class<?> bean, Set<Class<?>> parentBeans) throws IocException {
+    if(!parentBeans.add(bean)) {
+      throw new IocException("Circular dependency detected for " + parentBeans);
+    }
+
+    int i=0;
+    Constructor<?> constructor = findBeanConstructor(bean);
+    Object[] args = new Object[constructor.getParameterCount()];
+    for(Parameter parameter : constructor.getParameters()) {
+      args[i] = getBean(parameter.getType());
+      if(args[i] == null) {
+        args[i] = loadBean(parameter.getType(), parentBeans);
+        addBean(args[i]);
+      }
+
+      i += 1;
+    }
+
+    return ReflectionUtils.newInstance(constructor, args);
   }
 
   public <T> T getBean(Class<T> clazz) {
