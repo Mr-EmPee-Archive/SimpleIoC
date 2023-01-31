@@ -126,9 +126,10 @@ public final class SimpleIoC {
     return ReflectionUtils.newInstance(constructor, args);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T getBean(Class<T> clazz) {
     return (T) beans.stream()
-        .filter(b -> b.getClass().equals(clazz))
+        .filter(b -> clazz.isAssignableFrom(b.getClass()))
         .findFirst().orElse(null);
   }
 
