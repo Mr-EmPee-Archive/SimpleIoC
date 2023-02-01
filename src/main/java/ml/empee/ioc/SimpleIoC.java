@@ -7,12 +7,9 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import ml.empee.ioc.annotations.Bean;
 import ml.empee.ioc.annotations.InversionOfControl;
 import ml.empee.ioc.utility.ReflectionUtils;
 import org.bukkit.event.HandlerList;
@@ -28,19 +25,19 @@ public final class SimpleIoC {
   private final JavaPlugin plugin;
   private final List<Object> beans = new ArrayList<>();
 
-  private static Constructor<?> findBeanConstructor(Class<?> bean) throws IocException {
-    if(!bean.isAnnotationPresent(Bean.class)) {
+  private static Constructor<? extends Bean> findBeanConstructor(Class<?> bean) throws IocException {
+    if(!Bean.class.isAssignableFrom(bean)) {
       throw new IocException("The class " + bean.getName() + " isn't a bean");
     }
 
     Constructor<?>[] constrcutors = bean.getConstructors();
     if(constrcutors.length == 1) {
-      return constrcutors[0];
+      return (Constructor<? extends Bean>) constrcutors[0];
     }
 
     for(Constructor<?> constructor : constrcutors) {
       if(constructor.isAnnotationPresent(InversionOfControl.class)) {
-        return constructor;
+        return (Constructor<? extends Bean>) constructor;
       }
     }
 
@@ -52,7 +49,8 @@ public final class SimpleIoC {
         .filter(c -> c.getPackageName().startsWith(packageToScan))
         .filter(c -> exclusions.stream().noneMatch(e -> c.getPackageName().startsWith(packageToScan + "." + e)))
         .map(c -> c.load())
-        .filter(c -> c.isAnnotationPresent(Bean.class))
+        .filter(c -> !c.equals(Bean.class))
+        .filter(Bean.class::isAssignableFrom)
         .collect(Collectors.toList());
   }
 
@@ -105,25 +103,29 @@ public final class SimpleIoC {
     }
   }
 
-  private Object loadBean(Class<?> bean, Set<Class<?>> parentBeans) throws IocException {
+  private Bean loadBean(Class<?> bean, Set<Class<?>> parentBeans) throws IocException {
     if(!parentBeans.add(bean)) {
       throw new IocException("Circular dependency detected for " + parentBeans);
     }
 
     int i=0;
-    Constructor<?> constructor = findBeanConstructor(bean);
+    Constructor<? extends Bean> constructor = findBeanConstructor(bean);
     Object[] args = new Object[constructor.getParameterCount()];
     for(Parameter parameter : constructor.getParameters()) {
       args[i] = getBean(parameter.getType());
       if(args[i] == null) {
         args[i] = loadBean(parameter.getType(), parentBeans);
+        if(!((Bean) args[i]).isEnabled()) {
+          throw new IocException("The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!");
+        }
+
         addBean(args[i]);
       }
 
       i += 1;
     }
 
-    return ReflectionUtils.newInstance(constructor, args);
+    return (Bean) ReflectionUtils.newInstance(constructor, args);
   }
 
   @SuppressWarnings("unchecked")
@@ -134,6 +136,14 @@ public final class SimpleIoC {
   }
 
   public void addBean(Object bean) {
+    if(bean instanceof Bean) {
+      if(!((Bean) bean).isEnabled()) {
+        return;
+      }
+
+      ((Bean) bean).onStart();
+    }
+
     if(bean instanceof Listener) {
       plugin.getServer().getPluginManager().registerEvents((Listener) bean, plugin);
     }
@@ -142,12 +152,12 @@ public final class SimpleIoC {
   }
 
   /**
-   * Unregister and stop the bean if it implements {@link Listener} or {@link Stoppable}. <br>
+   * Unregister and stop the bean if it implements {@link Listener} or {@link Bean}. <br>
    * Remove the bean from the container.
    */
   public void removeBean(Object bean) {
-   if(bean instanceof Stoppable) {
-     ((Stoppable) bean).stop();
+   if(bean instanceof Bean) {
+     ((Bean) bean).onStop();
    }
 
    if(bean instanceof Listener) {
@@ -158,13 +168,13 @@ public final class SimpleIoC {
   }
 
   /**
-   * Unregister and stop all the beans that implement {@link Listener} or {@link Stoppable}. <br>
+   * Unregister and stop all the beans that implement {@link Listener} or {@link Bean}. <br>
    * Clears the container.
    */
   public void removeAllBeans() {
     for(Object bean : beans) {
-      if(bean instanceof Stoppable) {
-        ((Stoppable) bean).stop();
+      if(bean instanceof Bean) {
+        ((Bean) bean).onStop();
       }
 
       if(bean instanceof Listener) {

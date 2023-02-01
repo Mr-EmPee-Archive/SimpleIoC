@@ -4,10 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
-import java.util.Optional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import ml.empee.ioc.annotations.Bean;
 import ml.empee.ioc.annotations.InversionOfControl;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.Test;
@@ -37,8 +35,7 @@ class BeanInitializationTest {
     assertTrue(firstBean.isStopped());
   }
 
-  @Bean
-  public static class ThirdBean {
+  public static class ThirdBean implements Bean {
 
     private final FirstBean firstBean;
     private final SecondBean secondBean;
@@ -56,22 +53,20 @@ class BeanInitializationTest {
 
   }
 
-  @Bean
   @RequiredArgsConstructor
-  public static class SecondBean {
+  public static class SecondBean implements Bean {
 
     private final FirstBean firstBean;
 
   }
 
-  @Bean
-  public static class FirstBean implements Stoppable {
+  public static class FirstBean implements Bean {
 
     @Getter
     private boolean stopped = false;
 
     @Override
-    public void stop() {
+    public void onStop() {
       stopped = true;
     }
   }
