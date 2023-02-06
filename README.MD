@@ -33,8 +33,7 @@ must have at least 1 accessible public constructor.
 > Your plugin instance is the first bean of the container
 ### Example
 ```java
-  @Bean
-  public static class ThirdBean {
+  public static class ThirdBean implements Bean {
 
     private final FirstBean firstBean;
     private final SecondBean secondBean;
@@ -52,8 +51,7 @@ must have at least 1 accessible public constructor.
 
   }
 
-  @Bean
-  public static class SecondBean {
+  public static class SecondBean implements Bean {
 
     private final FirstBean firstBean;
     
@@ -63,14 +61,13 @@ must have at least 1 accessible public constructor.
 
   }
 
-  @Bean
-  public static class FirstBean implements Stoppable {
+  public static class FirstBean implements Bean {
 
     @Getter
     private boolean stopped = false;
 
     @Override
-    public void stop() {
+    public void onStop() {
       stopped = true;
     }
   }
