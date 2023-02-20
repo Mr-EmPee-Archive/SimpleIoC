@@ -2,6 +2,9 @@
 A lightweight InvesrionOfControl container for minecraft,
 share and create instances of your classes with ease!
 
+# Additional features
+- Beans that are an instance of `RegisteredListener` will be automatically registered
+
 # Installation
 If you are using maven you can add this to your `pom.xml`
 ```xml
@@ -73,5 +76,3 @@ Make the classes that you want accessible implements the Bean interface (These c
     }
   }
 ```
-# Features
-- Beans that are an instance of `Listener` will be automatically registered

@@ -63,7 +63,7 @@ public final class SimpleIoC {
 
   /**
    * Deep scan all the classes from the provided package. <br>
-   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
+   * All the beans will be instantiated and if they implement {@link RegisteredListener}, registered. <br>
    * @param exclusions Packages to exclude from the scan
    */
   public void initialize(String packageToScan, List<String> exclusions) {
@@ -80,7 +80,7 @@ public final class SimpleIoC {
 
   /**
    * Deep scan all the classes from the where the plugin main class is located. <br>
-   * All the beans will be instantiated and if they implement {@link Listener}, registered. <br>
+   * All the beans will be instantiated and if they implement {@link RegisteredListener}, registered. <br>
    * @param exclusions Packages to exclude from the scan
    */
   public void initialize(String... exclusions) {
@@ -144,8 +144,8 @@ public final class SimpleIoC {
       ((Bean) bean).onStart();
     }
 
-    if(bean instanceof Listener) {
-      plugin.getServer().getPluginManager().registerEvents((Listener) bean, plugin);
+    if(bean instanceof RegisteredListener) {
+      plugin.getServer().getPluginManager().registerEvents((RegisteredListener) bean, plugin);
     }
 
     beans.add(bean);
