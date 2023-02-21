@@ -4,7 +4,7 @@ share and create instances of your classes with ease!
 
 # Additional features
 - Beans that are an instance of `RegisteredListener` will be automatically registered
-- Beans that extend ScheduledTask will be automatically scheduled
+- Beans that extend `ScheduledTask` will be automatically scheduled
 
 # Installation
 If you are using maven you can add this to your `pom.xml`
