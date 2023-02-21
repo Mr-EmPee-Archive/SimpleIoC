@@ -2,6 +2,7 @@ package ml.empee.ioc.utility;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
@@ -16,6 +17,17 @@ public class ReflectionUtils {
       return Class.forName(clazzName);
     } catch (ClassNotFoundException e) {
       throw new IocException("Unable to find the caller class", e);
+    }
+  }
+
+  @SneakyThrows
+  public static Object safeInvoke(Object source, Method method, Object... args) {
+    try {
+      return method.invoke(source);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e);
+    } catch (InvocationTargetException e) {
+      throw e.getCause();
     }
   }
 
