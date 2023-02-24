@@ -6,15 +6,20 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import ml.empee.ioc.annotations.DependsOn;
 import ml.empee.ioc.annotations.InversionOfControl;
 import ml.empee.ioc.utility.ReflectionUtils;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Simple IoC container for Bukkit plugins. <br> Use {@link #initialize(String...)} to initialize the
@@ -97,7 +102,7 @@ public final class SimpleIoC {
     }
 
     for (Class<?> bean : beans) {
-      if (getBean(bean) != null) {
+      if (hasBean(bean)) {
         continue;
       }
 
@@ -112,19 +117,28 @@ public final class SimpleIoC {
       throw new IocException("Circular dependency detected for " + parentBeans);
     }
 
-    int i = 0;
+    DependsOn dependencies = bean.getAnnotation(DependsOn.class);
+    if(dependencies != null) {
+      for (Class<?> dependency : dependencies.value()) {
+        Object dependencyBean = getOrLoadBean(dependency, parentBeans);
+        if(dependencyBean == null) {
+          throw new IocException(
+              "The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!"
+          );
+        }
+      }
+    }
+
     Constructor<? extends Bean> constructor = findBeanConstructor(bean);
     Object[] args = new Object[constructor.getParameterCount()];
-    for (Parameter parameter : constructor.getParameters()) {
-      args[i] = getBean(parameter.getType());
-      if (args[i] == null) {
-        args[i] = loadBean(parameter.getType(), parentBeans);
-        if (!((Bean) args[i]).isEnabled()) {
-          throw new IocException(
-              "The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!");
-        }
 
-        addBean(args[i]);
+    int i = 0;
+    for (Parameter parameter : constructor.getParameters()) {
+      args[i] = getOrLoadBean(parameter.getType(), parentBeans);
+      if(args[i] == null) {
+        throw new IocException(
+            "The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!"
+        );
       }
 
       i += 1;
@@ -133,6 +147,25 @@ public final class SimpleIoC {
     return (Bean) ReflectionUtils.newInstance(constructor, args);
   }
 
+  private Object getOrLoadBean(Class<?> clazz, Set<Class<?>> parentBeans) {
+    Object bean = getBean(clazz);
+    if (bean == null) {
+      bean = loadBean(clazz, parentBeans);
+      if (!((Bean) bean).isEnabled()) {
+        return null;
+      }
+
+      addBean(bean);
+    }
+
+    return bean;
+  }
+
+  public boolean hasBean(Class<?> clazz) {
+    return getBean(clazz) != null;
+  }
+
+  @Nullable
   @SuppressWarnings("unchecked")
   public <T> T getBean(Class<T> clazz) {
     return (T) beans.stream()
