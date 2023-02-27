@@ -36,9 +36,9 @@ public class ReflectionUtils {
     try {
       return constructor.newInstance(args);
     } catch (InvocationTargetException e) {
-      throw e.getCause();
+      throw new IocException("Unable to instantiate " + constructor.getDeclaringClass().getName(), e.getCause());
     } catch (InstantiationException | IllegalAccessException e) {
-      throw new IocException("Unable to create bean" + constructor.getDeclaringClass().getName(), e);
+      throw new IocException("Unable to instantiate " + constructor.getDeclaringClass().getName(), e);
     }
   }
 
