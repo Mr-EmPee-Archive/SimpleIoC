@@ -35,12 +35,12 @@ public final class SimpleIoC {
       throw new IocException("The class " + bean.getName() + " isn't a bean");
     }
 
-    Constructor<?>[] constrcutors = bean.getConstructors();
-    if (constrcutors.length == 1) {
-      return (Constructor<? extends Bean>) constrcutors[0];
+    Constructor<?>[] constructors = bean.getConstructors();
+    if (constructors.length == 1) {
+      return (Constructor<? extends Bean>) constructors[0];
     }
 
-    for (Constructor<?> constructor : constrcutors) {
+    for (Constructor<?> constructor : constructors) {
       if (constructor.isAnnotationPresent(InversionOfControl.class)) {
         return (Constructor<? extends Bean>) constructor;
       }
@@ -187,7 +187,9 @@ public final class SimpleIoC {
 
     if (bean instanceof RegisteredListener) {
       plugin.getServer().getPluginManager().registerEvents((RegisteredListener) bean, plugin);
-    } else if(bean instanceof ScheduledTask) {
+    }
+
+    if(bean instanceof ScheduledTask) {
       ScheduledTask task = (ScheduledTask) bean;
       if(task.isAsync()) {
         task.runTaskTimerAsynchronously(plugin, task.getDelay(), task.getPeriod());
