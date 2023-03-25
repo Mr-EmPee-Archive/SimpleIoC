@@ -208,7 +208,9 @@ public final class SimpleIoC {
 
     if (bean instanceof Listener) {
       HandlerList.unregisterAll((Listener) bean);
-    } else if (bean instanceof ScheduledTask) {
+    }
+
+    if (bean instanceof ScheduledTask) {
       ((ScheduledTask) bean).cancel();
     }
   }
