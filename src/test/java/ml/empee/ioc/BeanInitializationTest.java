@@ -33,7 +33,7 @@ class BeanInitializationTest {
     container.initialize("ml.empee.ioc", Collections.emptyList());
 
     FirstBean firstBean = container.getBean(FirstBean.class);
-    container.removeAllBeans();
+    container.removeAllBeans(true);
     assertTrue(firstBean.isStopped());
   }
 
@@ -42,7 +42,7 @@ class BeanInitializationTest {
     SimpleIoC container = new SimpleIoC(plugin);
     container.initialize("ml.empee.ioc", Collections.emptyList());
     assertTrue(container.hasBean(FifthBean.class));
-    container.removeAllBeans();
+    container.removeAllBeans(true);
     FourthBean.enabled = false;
     assertThrows(IocException.class, () -> {
       container.initialize("ml.empee.ioc", Collections.emptyList());

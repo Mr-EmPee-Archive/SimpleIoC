@@ -213,26 +213,32 @@ public final class SimpleIoC {
     if (bean instanceof ScheduledTask) {
       ((ScheduledTask) bean).cancel();
     }
-
-    ReflectionUtils.pruneFieldsOf(bean);
   }
 
   /**
    * Remove the bean from the container and unregister every scheduled repeated method or listener
+   *
+   * @param prune if true all the non-static fields are pruned for GC purposes, this may cause NPE
+   *              if there are instances that references the bean
    */
-  public void removeBean(Object bean) {
+  public void removeBean(Object bean, boolean prune) {
     unregisterBean(bean);
+
     beans.remove(bean);
+    ReflectionUtils.pruneFieldsOf(bean);
   }
 
   /**
    * Remove all the beans from the container and unregister every scheduled repeated method or listener
+   *
+   * @param prune if true all the non-static fields are pruned for GC purposes, this may cause NPE
+   *              if there are external instances that references a bean
    */
-  public void removeAllBeans() {
-    for (Object bean : beans) {
-      unregisterBean(bean);
+  public void removeAllBeans(boolean prune) {
+    beans.forEach(this::unregisterBean);
+    if(prune) {
+      beans.forEach(ReflectionUtils::pruneFieldsOf);
     }
-
     beans.clear();
   }
 
