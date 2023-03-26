@@ -213,6 +213,8 @@ public final class SimpleIoC {
     if (bean instanceof ScheduledTask) {
       ((ScheduledTask) bean).cancel();
     }
+
+    ReflectionUtils.pruneFieldsOf(bean);
   }
 
   /**
