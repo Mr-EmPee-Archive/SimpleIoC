@@ -1,25 +1,27 @@
 package ml.empee.ioc;
 
 import com.google.common.reflect.ClassPath;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import lombok.SneakyThrows;
 import ml.empee.ioc.annotations.DependsOn;
+import ml.empee.ioc.annotations.Instance;
 import ml.empee.ioc.annotations.InversionOfControl;
 import ml.empee.ioc.utility.ReflectionUtils;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Simple IoC container for Bukkit plugins. <br> Use {@link #initialize(String...)} to initialize the
@@ -60,6 +62,21 @@ public final class SimpleIoC {
         .filter(c -> !c.equals(Bean.class))
         .filter(Bean.class::isAssignableFrom)
         .collect(Collectors.toList());
+  }
+
+  @SneakyThrows
+  public static void injectInstance(Object target) {
+    Class<?> clazz = target.getClass();
+    List<Field> targetFields = Arrays.stream(clazz.getDeclaredFields())
+        .filter(f -> Modifier.isStatic(f.getModifiers()))
+        .filter(f -> f.getType().isAssignableFrom(clazz))
+        .filter(f -> f.isAnnotationPresent(Instance.class))
+        .collect(Collectors.toList());
+
+    for (Field field : targetFields) {
+      field.setAccessible(true);
+      field.set(target, target);
+    }
   }
 
   public SimpleIoC(JavaPlugin plugin) {
@@ -118,10 +135,10 @@ public final class SimpleIoC {
     }
 
     DependsOn dependencies = bean.getAnnotation(DependsOn.class);
-    if(dependencies != null) {
+    if (dependencies != null) {
       for (Class<?> dependency : dependencies.value()) {
         Object dependencyBean = getOrLoadBean(dependency, parentBeans);
-        if(dependencyBean == null) {
+        if (dependencyBean == null) {
           throw new IocException(
               "The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!"
           );
@@ -135,7 +152,7 @@ public final class SimpleIoC {
     int i = 0;
     for (Parameter parameter : constructor.getParameters()) {
       args[i] = getOrLoadBean(parameter.getType(), parentBeans);
-      if(args[i] == null) {
+      if (args[i] == null) {
         throw new IocException(
             "The bean " + bean.getName() + " depends on a conditional bean that isn't enabled!"
         );
@@ -177,6 +194,7 @@ public final class SimpleIoC {
    * Add the bean to the container and register every scheduled repeated method or listener
    */
   public void addBean(Object bean) {
+    injectInstance(bean);
     if (bean instanceof Bean) {
       if (!((Bean) bean).isEnabled()) {
         return;
@@ -189,15 +207,6 @@ public final class SimpleIoC {
       plugin.getServer().getPluginManager().registerEvents((RegisteredListener) bean, plugin);
     }
 
-    if(bean instanceof ScheduledTask) {
-      ScheduledTask task = (ScheduledTask) bean;
-      if(task.isAsync()) {
-        task.runTaskTimerAsynchronously(plugin, task.getDelay(), task.getPeriod());
-      } else {
-        task.runTaskTimer(plugin, task.getDelay(), task.getPeriod());
-      }
-    }
-
     beans.add(bean);
   }
 
@@ -206,12 +215,8 @@ public final class SimpleIoC {
       ((Bean) bean).onStop();
     }
 
-    if (bean instanceof Listener) {
+    if (bean instanceof RegisteredListener) {
       HandlerList.unregisterAll((Listener) bean);
-    }
-
-    if (bean instanceof ScheduledTask) {
-      ((ScheduledTask) bean).cancel();
     }
   }
 
@@ -223,9 +228,11 @@ public final class SimpleIoC {
    */
   public void removeBean(Object bean, boolean prune) {
     unregisterBean(bean);
-
     beans.remove(bean);
-    ReflectionUtils.pruneFieldsOf(bean);
+
+    if (prune) {
+      ReflectionUtils.pruneFieldsOf(bean);
+    }
   }
 
   /**
@@ -236,9 +243,10 @@ public final class SimpleIoC {
    */
   public void removeAllBeans(boolean prune) {
     beans.forEach(this::unregisterBean);
-    if(prune) {
+    if (prune) {
       beans.forEach(ReflectionUtils::pruneFieldsOf);
     }
+
     beans.clear();
   }
 
